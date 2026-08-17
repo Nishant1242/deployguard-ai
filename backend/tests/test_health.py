@@ -14,5 +14,5 @@ def test_health_check_returns_expected_response() -> None:
         "status": "healthy",
         "service": "deployguard-api",
         "version": "0.2.0",
-        "environment": "development", 
+        "environment": "development",
     }
