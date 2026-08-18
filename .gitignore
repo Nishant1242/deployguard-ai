@@ -6,6 +6,12 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # Secrets
 .env
 .env.*
