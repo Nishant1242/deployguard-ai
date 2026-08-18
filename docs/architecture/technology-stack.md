@@ -1,0 +1,289 @@
+# DeployGuard AI Technology Stack and Architecture
+
+**Status:** Approved architecture source of truth
+**Last updated:** August 18, 2026
+
+## 1. Purpose
+
+DeployGuard AI is a secure control plane for registering, evaluating, monitoring, approving, deploying, auditing, and rolling back business AI agents.
+
+This document is the permanent source of truth for major technology and architecture decisions.
+
+Before replacing, adding, or removing a major technology:
+
+1. Explain the reason for the change.
+2. Compare relevant alternatives.
+3. Identify security, cost, and migration effects.
+4. Receive explicit approval from the project owner.
+5. Update this document through a feature branch and Pull Request.
+
+## 2. Architecture principles
+
+- Build one small, production-quality milestone at a time.
+- Keep the complete MVP locally buildable and testable for $0.
+- Use a modular monolith until scale or operational requirements justify another architecture.
+- Separate frontend, backend, database, AI provider, storage, and cloud infrastructure through clear interfaces.
+- Keep deterministic security and approval rules separate from LLM decisions.
+- Require human approval for production deployments and important rollback-policy changes.
+- Do not build password storage or authentication protocols from scratch.
+- Do not introduce infrastructure before a real requirement exists.
+- Do not create paid resources or enable paid APIs without explicit approval.
+- Use feature branches, Pull Requests, required CI checks, and squash merging.
+
+## 3. Technology status definitions
+
+- **Implemented:** Present in the repository and currently used.
+- **Planned:** Approved direction, but not necessarily implemented.
+- **Undecided:** Requires an alternatives review and explicit approval.
+- **Deferred:** Excluded from the MVP unless a demonstrated requirement changes the decision.
+- **Paid or cost-controlled:** May generate charges and requires explicit approval before activation.
+
+## 4. Implemented technologies
+
+### Application
+
+| Area | Technology | Version or decision |
+| --- | --- | --- |
+| Language | Python | 3.14.4 |
+| Backend framework | FastAPI | 0.141.1 |
+| ASGI server | Uvicorn | 0.52.3 |
+| Data validation | Pydantic | 2.13.4 |
+| Configuration | Pydantic Settings | 2.15.0 |
+
+### Testing and code quality
+
+| Area | Technology | Version or decision |
+| --- | --- | --- |
+| Backend testing | Pytest | 9.1.1 |
+| API testing | FastAPI TestClient with httpx2 | 2.10.0 |
+| Coverage | pytest-cov | 7.1.0 with a 90% minimum |
+| Linting and formatting | Ruff | 0.16.3 |
+| Dependency validation | pip check | Required in CI |
+
+### Security and CI/CD
+
+| Area | Technology | Version or decision |
+| --- | --- | --- |
+| Dependency vulnerability scanning | pip-audit | 2.10.1 |
+| Static Python security analysis | Bandit | 1.9.4 |
+| Secret scanning | Gitleaks | 8.30.0 |
+| Code scanning | GitHub CodeQL | Python analysis |
+| CI/CD | GitHub Actions | Actions pinned to full commit SHAs |
+| Workflow permissions | GitHub Actions | Read-only unless additional access is required |
+| Git workflow | Git | Feature branch → tests → Pull Request → CI → squash merge |
+
+Direct Python dependencies remain pinned in the requirements files. `.env` and `.venv` content must remain outside Git.
+
+## 5. Planned technologies
+
+These technologies are approved directions but are not considered implemented until added through their own reviewed milestones.
+
+### Frontend
+
+- Next.js with the App Router
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- TanStack Query when API integration begins
+- Vitest and React Testing Library
+- Playwright for end-to-end testing
+
+### Backend architecture
+
+- Continue using FastAPI.
+- Use a modular monolith.
+- Introduce versioned REST endpoints under `/api/v1`.
+- Keep business logic separate from HTTP routing.
+- Keep database, AI provider, object storage, and cloud integrations behind clear interfaces.
+
+### Database
+
+- PostgreSQL as the system of record
+- SQLAlchemy for object-relational mapping
+- Alembic for database migrations
+- Psycopg as the PostgreSQL driver
+- PostgreSQL `jsonb` for provider-specific metadata
+- PostgreSQL Row-Level Security after tenant isolation is implemented
+
+### Authentication and authorization
+
+- OpenID Connect
+- OAuth 2.0
+- Signed access tokens validated by FastAPI
+- Tenant-aware Role-Based Access Control
+- No custom password-storage implementation
+
+The identity provider remains undecided.
+
+### AI and agent integration
+
+- A provider-neutral AI adapter interface
+- Mocked AI responses or a local model during early development
+- Human approval for production deployments
+- Human approval for important rollback-policy changes
+- Deterministic security and approval policies outside the LLM
+
+The first hosted LLM provider remains undecided.
+
+### Object storage
+
+- MinIO for local development
+- An S3-compatible storage interface
+- Amazon S3 as an optional AWS production reference
+
+### Containers and infrastructure
+
+- Docker
+- Docker Compose for local development
+- Terraform for approved infrastructure changes
+
+### Observability
+
+- Structured JSON logging
+- Correlation IDs
+- OpenTelemetry
+- CloudWatch only in an approved AWS environment
+
+### Optional AWS production reference architecture
+
+The documented enterprise reference architecture may use:
+
+- Amazon ECS Fargate
+- Amazon Elastic Container Registry
+- Amazon Relational Database Service for PostgreSQL
+- Amazon S3
+- AWS Secrets Manager
+- AWS Key Management Service
+- Amazon CloudWatch
+- Terraform
+
+This is a reference architecture only. No AWS deployment is approved by this document.
+
+## 6. Undecided technologies
+
+### Identity provider
+
+No identity provider has been selected.
+
+Before selection, compare relevant options for:
+
+- OpenID Connect and OAuth 2.0 support
+- Tenant and role management
+- FastAPI and Next.js integration
+- Security controls
+- Local development support
+- Free-tier limitations
+- Production pricing
+- Migration and vendor-lock-in risk
+
+### First hosted LLM provider
+
+No hosted LLM provider has been selected.
+
+When the first hosted AI feature begins, compare OpenAI and Azure OpenAI for:
+
+- Model capabilities
+- Security and privacy controls
+- Regional availability
+- Authentication
+- Rate limits
+- Pricing
+- Monitoring
+- Portability through the provider-neutral adapter
+
+No paid API may be enabled without explicit approval.
+
+## 7. Deferred technologies
+
+The following technologies and architecture patterns are deferred from the MVP:
+
+- Kubernetes
+- Microservices
+- A separate vector database
+- Multi-cloud deployment
+- Custom model training
+- Fully autonomous production deployment
+- Celery and Redis until a real asynchronous workflow exists
+- Prometheus and Grafana until monitored workloads exist
+- LangChain or LangGraph until a real workflow requires them
+
+PostgreSQL remains the system of record. A queue, vector database, or additional orchestration framework must not be introduced based only on possible future needs.
+
+## 8. Zero-cost local development rule
+
+The complete MVP must remain buildable and testable locally for $0.
+
+Use free and open-source local tools whenever possible:
+
+- PostgreSQL locally
+- Redis locally only when an asynchronous workflow requires it
+- MinIO locally
+- Docker Compose
+- Mocked AI responses or a local model during early development
+- Standard GitHub Actions runners for the public repository
+
+Free tiers have limits and can change. They must not be described as permanently free.
+
+## 9. Paid and cost-controlled technologies
+
+The following services can generate charges:
+
+- OpenAI API
+- Azure OpenAI
+- Amazon ECS Fargate
+- Amazon RDS
+- AWS Secrets Manager
+- Amazon S3
+- Amazon CloudWatch
+- AWS KMS
+- Amazon ECR
+- AWS load balancers
+- Amazon Route 53
+- Managed Redis
+- Custom domains
+
+Do not create a paid cloud resource, enable a paid API, or request billing information without explicit approval.
+
+Before any cloud deployment:
+
+1. Verify current official pricing.
+2. Estimate the maximum expected cost.
+3. Explain free-tier limitations.
+4. Configure budgets and billing alerts where available.
+5. Provide a complete teardown procedure.
+6. Receive explicit approval.
+
+AWS remains a documented enterprise reference architecture until an actual deployment is approved. A temporary demonstration deployment must be removed after the demonstration unless continued operation is explicitly approved.
+
+## 10. Security boundaries
+
+- Validate all authentication tokens using approved libraries.
+- Enforce tenant-aware authorization on protected operations.
+- Add PostgreSQL Row-Level Security after tenant isolation exists.
+- Apply least-privilege permissions to CI and cloud resources.
+- Never commit secrets.
+- Store production secrets in an approved secrets manager.
+- Keep audit records separate from ordinary application logs.
+- Do not allow an LLM to make final access-control decisions.
+- Do not allow fully autonomous production deployments.
+- Test security-sensitive changes before merging.
+
+Security scanners reduce risk but do not prove that the application is vulnerability-free.
+
+## 11. Change-control process
+
+Every major architecture change must use this process:
+
+1. Create a focused feature or documentation branch.
+2. Explain the problem and proposed decision.
+3. Compare relevant alternatives.
+4. Document security, cost, and migration effects.
+5. Receive explicit approval.
+6. Update this source-of-truth document.
+7. Run applicable tests and security checks.
+8. Review the Git diff.
+9. Open a Pull Request.
+10. Merge only after required checks pass.
+
+Application work must follow the architecture recorded in this document.
