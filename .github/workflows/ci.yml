@@ -40,3 +40,46 @@ jobs:
 
       - name: Run tests with coverage
         run: python -m pytest
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      GITLEAKS_VERSION: "8.30.0"
+      GITLEAKS_ARCHIVE_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+
+    steps:
+      - name: Check out full Git history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install verified Gitleaks binary
+        shell: bash
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          download="/tmp/${archive}"
+          install_dir="/tmp/gitleaks-${GITLEAKS_VERSION}"
+
+          curl --fail --show-error --silent --location \
+            --output "${download}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+
+          echo "${GITLEAKS_ARCHIVE_SHA256}  ${download}" | sha256sum --check
+
+          mkdir -p "${install_dir}"
+          tar -xzf "${download}" -C "${install_dir}" gitleaks
+          chmod +x "${install_dir}/gitleaks"
+          "${install_dir}/gitleaks" version
+
+      - name: Scan full Git history for secrets
+        shell: bash
+        run: |
+          "/tmp/gitleaks-${GITLEAKS_VERSION}/gitleaks" git \
+            --log-opts="--all" \
+            --redact \
+            --verbose \
+            --no-banner \
+            .
