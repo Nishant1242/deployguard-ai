@@ -32,5 +32,11 @@ jobs:
       - name: Check dependency compatibility
         run: python -m pip check
 
+      - name: Run Ruff lint checks
+        run: ruff check .
+
+      - name: Run Ruff format checks
+        run: ruff format --check .
+
       - name: Run tests
         run: python -m pytest

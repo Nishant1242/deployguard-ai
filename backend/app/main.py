@@ -15,9 +15,7 @@ app = FastAPI(
 
 @app.get("/", tags=["System"])
 def root() -> dict[str, str]:
-    return {
-        "message": f"{settings.app_name} is running"
-    }
+    return {"message": f"{settings.app_name} is running"}
 
 
 @app.get("/health", tags=["System"])
