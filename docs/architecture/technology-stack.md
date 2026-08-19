@@ -106,6 +106,35 @@ These technologies are approved directions but are not considered implemented un
 - PostgreSQL `jsonb` for provider-specific metadata
 - PostgreSQL Row-Level Security after tenant isolation is implemented
 
+#### Milestone 3A implementation approval
+
+**Status:** Approved for implementation by the project owner on August 18, 2026.
+
+The approved PostgreSQL persistence foundation is:
+
+- PostgreSQL 18.x using the latest supported patch release
+- PostgreSQL 18.6 at the time of approval
+- SQLAlchemy 2.0.52 with synchronous sessions
+- Alembic 1.19.1 for explicit, version-controlled migrations
+- Psycopg 3.3.4 as the PostgreSQL driver
+- `psycopg[binary]` for Windows development and CI
+- Real PostgreSQL integration tests using a dedicated database whose name ends in `_test`
+- Database credentials loaded through Pydantic Settings
+- Migrations executed explicitly rather than during API startup
+- No SQLite substitute for PostgreSQL integration tests
+- No paid services or persistent cloud resources
+
+PR #13 is limited to database configuration, the SQLAlchemy engine and session
+foundation, Alembic configuration, an empty baseline migration, integration
+tests, CI test-database support, dependency updates, and documentation.
+
+PR #13 must not add business tables, tenant tables, authentication,
+authorization, Row-Level Security policies, product API routes, deployment
+logic, Docker Compose, or cloud resources.
+
+This approval authorizes implementation. These technologies remain classified
+as planned until the implementation is merged into `main`.
+
 ### Authentication and authorization
 
 - OpenID Connect
