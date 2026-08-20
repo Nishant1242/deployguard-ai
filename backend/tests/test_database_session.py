@@ -5,6 +5,7 @@ from sqlalchemy.orm import DeclarativeBase
 from app.core.config import Settings
 from app.db.base import Base
 from app.db import session as session_module
+from app.models import Tenant
 
 
 VALID_DATABASE_URL = (
@@ -12,9 +13,9 @@ VALID_DATABASE_URL = (
 )
 
 
-def test_declarative_base_starts_without_business_tables() -> None:
+def test_declarative_base_registers_approved_models() -> None:
     assert issubclass(Base, DeclarativeBase)
-    assert not Base.metadata.tables
+    assert Base.metadata.tables["tenants"] is Tenant.__table__
 
 
 def test_create_database_engine_uses_approved_pool_settings(
