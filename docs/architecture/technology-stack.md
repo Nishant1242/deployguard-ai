@@ -1,7 +1,7 @@
 # DeployGuard AI Technology Stack and Architecture
 
 **Status:** Approved architecture source of truth
-**Last updated:** August 18, 2026
+**Last updated:** August 20, 2026
 
 ## 1. Purpose
 
@@ -50,6 +50,47 @@ Before replacing, adding, or removing a major technology:
 | Data validation | Pydantic | 2.13.4 |
 | Configuration | Pydantic Settings | 2.15.0 |
 
+### Database persistence
+
+| Area | Technology | Version or decision |
+| --- | --- | --- |
+| System of record | PostgreSQL | 18.x; 18.6 local implementation |
+| Object-relational mapping | SQLAlchemy | 2.0.52 with synchronous sessions |
+| Database migrations | Alembic | 1.19.1 with explicit execution |
+| PostgreSQL driver | Psycopg | 3.3.4 with binary distribution for development and CI |
+| Connection management | SQLAlchemy | Pre-ping and bounded pool configuration |
+| Integration testing | PostgreSQL | Dedicated database ending in `_test`; no SQLite substitute |
+
+#### Milestone 3A architecture decision
+
+**Status:** Approved by the project owner on August 18, 2026 and implemented through PR #13.
+
+The approved PostgreSQL persistence foundation is:
+
+- PostgreSQL 18.x using the latest supported patch release
+- PostgreSQL 18.6 at the time of approval
+- SQLAlchemy 2.0.52 with synchronous sessions
+- Alembic 1.19.1 for explicit, version-controlled migrations
+- Psycopg 3.3.4 as the PostgreSQL driver
+- `psycopg[binary]` for Windows development and CI
+- Real PostgreSQL integration tests using a dedicated database whose name ends in `_test`
+- Database credentials loaded through Pydantic Settings
+- Migrations executed explicitly rather than during API startup
+- No SQLite substitute for PostgreSQL integration tests
+- No paid services or persistent cloud resources
+
+PR #13 was limited to database configuration, the SQLAlchemy engine and session
+foundation, Alembic configuration, an empty baseline migration, integration
+tests, CI test-database support, dependency updates, and documentation.
+
+PR #13 did not add business tables, tenant tables, authentication,
+authorization, Row-Level Security policies, product API routes, deployment
+logic, Docker Compose, or cloud resources.
+
+The persistence foundation is classified as implemented. PostgreSQL `jsonb`
+usage and Row-Level Security remain planned until their own approved
+milestones are implemented.
+
 ### Testing and code quality
 
 | Area | Technology | Version or decision |
@@ -97,43 +138,10 @@ These technologies are approved directions but are not considered implemented un
 - Keep business logic separate from HTTP routing.
 - Keep database, AI provider, object storage, and cloud integrations behind clear interfaces.
 
-### Database
+### Planned database capabilities
 
-- PostgreSQL as the system of record
-- SQLAlchemy for object-relational mapping
-- Alembic for database migrations
-- Psycopg as the PostgreSQL driver
 - PostgreSQL `jsonb` for provider-specific metadata
 - PostgreSQL Row-Level Security after tenant isolation is implemented
-
-#### Milestone 3A implementation approval
-
-**Status:** Approved for implementation by the project owner on August 18, 2026.
-
-The approved PostgreSQL persistence foundation is:
-
-- PostgreSQL 18.x using the latest supported patch release
-- PostgreSQL 18.6 at the time of approval
-- SQLAlchemy 2.0.52 with synchronous sessions
-- Alembic 1.19.1 for explicit, version-controlled migrations
-- Psycopg 3.3.4 as the PostgreSQL driver
-- `psycopg[binary]` for Windows development and CI
-- Real PostgreSQL integration tests using a dedicated database whose name ends in `_test`
-- Database credentials loaded through Pydantic Settings
-- Migrations executed explicitly rather than during API startup
-- No SQLite substitute for PostgreSQL integration tests
-- No paid services or persistent cloud resources
-
-PR #13 is limited to database configuration, the SQLAlchemy engine and session
-foundation, Alembic configuration, an empty baseline migration, integration
-tests, CI test-database support, dependency updates, and documentation.
-
-PR #13 must not add business tables, tenant tables, authentication,
-authorization, Row-Level Security policies, product API routes, deployment
-logic, Docker Compose, or cloud resources.
-
-This approval authorizes implementation. These technologies remain classified
-as planned until the implementation is merged into `main`.
 
 ### Authentication and authorization
 
