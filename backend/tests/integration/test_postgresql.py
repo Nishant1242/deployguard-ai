@@ -90,6 +90,9 @@ def test_postgresql_connection_uses_restricted_test_role(
                 SELECT
                     current_database() AS database_name,
                     current_user AS database_user,
+                    current_setting(
+                        'server_version_num'
+                    )::integer AS server_version_num,
                     rolsuper AS is_superuser,
                     rolcreatedb AS can_create_database,
                     rolcreaterole AS can_create_role,
@@ -121,6 +124,7 @@ def test_postgresql_connection_uses_restricted_test_role(
 
     assert role.database_name.endswith("_test")
     assert role.database_user == "deployguard"
+    assert role.server_version_num // 10000 == 18
     assert role.is_superuser is False
     assert role.can_create_database is False
     assert role.can_create_role is False

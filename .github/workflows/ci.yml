@@ -13,6 +13,26 @@ jobs:
   test:
     name: Test Python 3.14
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://deployguard:deployguard@localhost:5432/deployguard_test
+      TEST_DATABASE_URL: postgresql+psycopg://deployguard:deployguard@localhost:5432/deployguard_test
 
     steps:
       - name: Check out repository
@@ -28,6 +48,68 @@ jobs:
 
       - name: Install runtime and development dependencies
         run: python -m pip install -r backend/requirements-dev.txt
+
+      - name: Initialize restricted PostgreSQL test database
+        env:
+          POSTGRES_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          python - <<'PY'
+          import os
+
+          import psycopg
+
+
+          admin_url = os.environ["POSTGRES_ADMIN_URL"]
+
+          with psycopg.connect(
+              admin_url,
+              autocommit=True,
+          ) as connection:
+              with connection.cursor() as cursor:
+                  cursor.execute(
+                      """
+                      CREATE ROLE deployguard
+                      LOGIN
+                      NOSUPERUSER
+                      NOCREATEDB
+                      NOCREATEROLE
+                      NOREPLICATION
+                      NOBYPASSRLS
+                      PASSWORD 'deployguard'
+                      """
+                  )
+                  cursor.execute(
+                      """
+                      CREATE DATABASE deployguard_test
+                      OWNER deployguard
+                      """
+                  )
+
+          test_admin_url = (
+              admin_url.rsplit("/", maxsplit=1)[0]
+              + "/deployguard_test"
+          )
+
+          with psycopg.connect(
+              test_admin_url,
+              autocommit=True,
+          ) as connection:
+              with connection.cursor() as cursor:
+                  cursor.execute(
+                      "REVOKE CREATE ON SCHEMA public FROM PUBLIC"
+                  )
+                  cursor.execute(
+                      """
+                      GRANT USAGE, CREATE
+                      ON SCHEMA public
+                      TO deployguard
+                      """
+                  )
+
+          print(
+              "Restricted PostgreSQL test database initialized."
+          )
+          PY
 
       - name: Check dependency compatibility
         run: python -m pip check
