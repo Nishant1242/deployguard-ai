@@ -1,0 +1,8 @@
+DeployGuard AI database migrations.
+
+Run migrations explicitly from the repository root:
+
+    python -m alembic upgrade head
+
+The database URL is loaded through Pydantic Settings. Migrations must never run
+automatically during API startup.
