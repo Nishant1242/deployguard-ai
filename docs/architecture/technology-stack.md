@@ -1,7 +1,7 @@
 # DeployGuard AI Technology Stack and Architecture
 
 **Status:** Approved architecture source of truth
-**Last updated:** August 20, 2026
+**Last updated:** August 21, 2026
 
 ## 1. Purpose
 
@@ -123,7 +123,6 @@ for separately approved milestones.
 
 #### Milestone 3C architecture decision
 
-
 **Status:** Approved by the project owner on August 20, 2026 and implemented through PR #15.
 
 The approved tenant creation API foundation is:
@@ -155,6 +154,39 @@ PR #15 does not add authentication, authorization, tenant memberships,
 tenant-aware request context, PostgreSQL Row-Level Security, tenant retrieval
 or modification routes, agent records, Docker resources, cloud resources,
 database migrations, or new major dependencies.
+
+#### Milestone 3D architecture decision
+
+**Status:** Approved by the project owner on August 21, 2026 and implemented through PR #16.
+
+The approved tenant retrieval API foundation is:
+
+- `GET /api/v1/tenants/{tenant_id}`
+- FastAPI UUID path validation
+- `200 OK` for an existing tenant
+- `404 Not Found` for an unknown valid tenant UUID
+- `422 Unprocessable Entity` for an invalid UUID
+- Reuse of the safe public tenant response schema
+- Primary-key retrieval through SQLAlchemy `Session.get`
+- Read-only session behavior with no service commit
+- Unit tests with mocked persistence
+- Real PostgreSQL retrieval integration tests
+- Existing rollback-isolated database test fixtures
+
+The tenant retrieval endpoint shares the unauthenticated local development and
+CI security boundary of the tenant creation endpoint. A tenant UUID is an
+identifier, not an authorization control. The endpoint is not approved for
+public production exposure until authentication and tenant-aware authorization
+are implemented.
+
+PR #16 is limited to the read-only tenant retrieval service, the versioned
+tenant retrieval route, `404` handling, unit tests, real PostgreSQL integration
+tests, and architecture documentation.
+
+PR #16 does not add tenant listing, slug-based lookup, tenant modification,
+authentication, authorization, tenant memberships, tenant-aware request
+context, PostgreSQL Row-Level Security, database migrations, new dependencies,
+Docker resources, cloud resources, or frontend changes.
 
 ### Testing and code quality
 

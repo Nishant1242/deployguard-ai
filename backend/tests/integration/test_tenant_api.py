@@ -119,3 +119,65 @@ def test_create_tenant_api_returns_conflict_and_recovers_session(
     )
 
     assert tenant_count == 1
+
+
+def test_get_tenant_api_retrieves_existing_tenant_from_postgresql(
+    database_client: TestClient,
+    database_session: Session,
+) -> None:
+    slug = unique_slug("api-retrieve")
+    tenant = Tenant(
+        slug=slug,
+        display_name="Retrieved Tenant",
+        status="suspended",
+    )
+
+    database_session.add(tenant)
+    database_session.flush()
+
+    tenant_id = tenant.id
+    database_session.expunge_all()
+
+    response = database_client.get(
+        f"/api/v1/tenants/{tenant_id}",
+    )
+
+    assert response.status_code == 200
+
+    response_body = response.json()
+
+    assert set(response_body) == {
+        "id",
+        "slug",
+        "display_name",
+        "status",
+        "created_at",
+        "updated_at",
+    }
+    assert response_body["id"] == str(tenant_id)
+    assert response_body["slug"] == slug
+    assert response_body["display_name"] == "Retrieved Tenant"
+    assert response_body["status"] == "suspended"
+
+    created_at = datetime.fromisoformat(
+        response_body["created_at"].replace("Z", "+00:00")
+    )
+    updated_at = datetime.fromisoformat(
+        response_body["updated_at"].replace("Z", "+00:00")
+    )
+
+    assert created_at.tzinfo is not None
+    assert updated_at.tzinfo is not None
+
+
+def test_get_tenant_api_returns_not_found_for_unknown_uuid(
+    database_client: TestClient,
+) -> None:
+    missing_tenant_id = uuid4()
+
+    response = database_client.get(
+        f"/api/v1/tenants/{missing_tenant_id}",
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Tenant not found."}
