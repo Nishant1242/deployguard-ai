@@ -17,7 +17,7 @@ from app.db.session import create_database_engine
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-BASELINE_REVISION = "0001_persistence_baseline"
+CURRENT_REVISION = "0002_create_tenants"
 
 
 class IntegrationTestSettings(BaseSettings):
@@ -134,7 +134,7 @@ def test_postgresql_connection_uses_restricted_test_role(
     assert schema_permissions.has_create is True
 
 
-def test_alembic_baseline_is_applied_idempotently(
+def test_alembic_head_is_applied_idempotently(
     test_database_url: str,
     postgresql_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
@@ -147,7 +147,7 @@ def test_alembic_baseline_is_applied_idempotently(
     alembic_config = Config(str(PROJECT_ROOT / "alembic.ini"))
     migration_scripts = ScriptDirectory.from_config(alembic_config)
 
-    assert migration_scripts.get_current_head() == BASELINE_REVISION
+    assert migration_scripts.get_current_head() == CURRENT_REVISION
 
     command.upgrade(
         alembic_config,
@@ -161,4 +161,4 @@ def test_alembic_baseline_is_applied_idempotently(
     with postgresql_engine.connect() as connection:
         migration_context = MigrationContext.configure(connection)
 
-        assert migration_context.get_current_revision() == BASELINE_REVISION
+        assert migration_context.get_current_revision() == CURRENT_REVISION
