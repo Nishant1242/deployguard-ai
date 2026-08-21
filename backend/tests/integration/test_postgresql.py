@@ -1,83 +1,12 @@
-from collections.abc import Generator
-from pathlib import Path
-
 import pytest
 from alembic import command
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from pydantic import SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import Engine, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import ArgumentError
-
-from app.core.config import Settings
-from app.db.session import create_database_engine
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CURRENT_REVISION = "0002_create_tenants"
-
-
-class IntegrationTestSettings(BaseSettings):
-    """Settings used only by PostgreSQL integration tests."""
-
-    test_database_url: SecretStr
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
-
-@pytest.fixture(scope="session")
-def test_database_url() -> str:
-    """Return a validated URL for the dedicated test database."""
-
-    raw_url = IntegrationTestSettings().test_database_url.get_secret_value()
-
-    try:
-        parsed_url = make_url(raw_url)
-    except ArgumentError as error:
-        raise RuntimeError(
-            "TEST_DATABASE_URL must be a valid SQLAlchemy URL."
-        ) from error
-
-    if parsed_url.drivername != "postgresql+psycopg":
-        raise RuntimeError("TEST_DATABASE_URL must use postgresql+psycopg.")
-
-    if not parsed_url.database or not parsed_url.database.endswith("_test"):
-        raise RuntimeError("TEST_DATABASE_URL must target a database ending in _test.")
-
-    if parsed_url.username != "deployguard":
-        raise RuntimeError("TEST_DATABASE_URL must use the deployguard role.")
-
-    return raw_url
-
-
-@pytest.fixture(scope="session")
-def postgresql_engine(
-    test_database_url: str,
-) -> Generator[Engine]:
-    """Create an engine connected only to the test database."""
-
-    settings = Settings(
-        _env_file=None,
-        database_url=test_database_url,
-        database_pool_size=2,
-        database_max_overflow=0,
-        database_pool_timeout_seconds=5,
-    )
-
-    database_engine = create_database_engine(settings)
-
-    try:
-        yield database_engine
-    finally:
-        database_engine.dispose()
 
 
 def test_postgresql_connection_uses_restricted_test_role(
@@ -136,7 +65,8 @@ def test_postgresql_connection_uses_restricted_test_role(
 
 def test_alembic_head_is_applied_idempotently(
     test_database_url: str,
-    postgresql_engine: Engine,
+    migrated_postgresql_engine: Engine,
+    alembic_config: Config,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv(
@@ -144,7 +74,6 @@ def test_alembic_head_is_applied_idempotently(
         test_database_url,
     )
 
-    alembic_config = Config(str(PROJECT_ROOT / "alembic.ini"))
     migration_scripts = ScriptDirectory.from_config(alembic_config)
 
     assert migration_scripts.get_current_head() == CURRENT_REVISION
@@ -158,7 +87,7 @@ def test_alembic_head_is_applied_idempotently(
         "head",
     )
 
-    with postgresql_engine.connect() as connection:
+    with migrated_postgresql_engine.connect() as connection:
         migration_context = MigrationContext.configure(connection)
 
         assert migration_context.get_current_revision() == CURRENT_REVISION
