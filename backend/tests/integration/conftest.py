@@ -5,15 +5,14 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from app.core.config import Settings
+from app.db.session import create_database_engine
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import Engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
-
-from app.core.config import Settings
-from app.db.session import create_database_engine
-
+from sqlalchemy.orm import Session
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -111,3 +110,29 @@ def migrated_postgresql_engine(
             os.environ["DATABASE_URL"] = previous_database_url
 
     return postgresql_engine
+
+
+@pytest.fixture
+def database_session(
+    migrated_postgresql_engine: Engine,
+) -> Generator[Session]:
+    """Provide a rollback-isolated session that supports service commits."""
+
+    connection = migrated_postgresql_engine.connect()
+    transaction = connection.begin()
+    session = Session(
+        bind=connection,
+        autoflush=False,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    try:
+        yield session
+    finally:
+        session.close()
+
+        if transaction.is_active:
+            transaction.rollback()
+
+        connection.close()

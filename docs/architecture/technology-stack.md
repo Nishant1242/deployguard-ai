@@ -121,6 +121,41 @@ cloud resources.
 Tenant-aware authorization and PostgreSQL Row-Level Security remain planned
 for separately approved milestones.
 
+#### Milestone 3C architecture decision
+
+
+**Status:** Approved by the project owner on August 20, 2026 and implemented through PR #15.
+
+The approved tenant creation API foundation is:
+
+- Pydantic request validation for tenant slugs and display names
+- A safe public tenant response schema
+- `POST /api/v1/tenants`
+- `201 Created` for successful tenant creation
+- `422 Unprocessable Entity` for invalid requests
+- `409 Conflict` for duplicate tenant slugs
+- Server-generated tenant UUIDs and timestamps
+- Server-controlled default tenant status of `active`
+- Explicit SQLAlchemy commit and rollback ownership in the tenant service
+- PostgreSQL unique-constraint enforcement for race-safe duplicate detection
+- Unit tests with mocked persistence
+- Real PostgreSQL API integration tests
+- Savepoint-based test isolation that supports service commits while preserving rollback after each test
+
+The tenant creation endpoint is an unauthenticated local development and CI
+foundation. It is not approved for public production exposure until
+authentication and tenant-aware authorization are implemented.
+
+PR #15 is limited to tenant request and response schemas, the tenant creation
+service, the versioned tenant creation route, unit tests, real PostgreSQL API
+integration tests, shared rollback-isolated test fixtures, and architecture
+documentation.
+
+PR #15 does not add authentication, authorization, tenant memberships,
+tenant-aware request context, PostgreSQL Row-Level Security, tenant retrieval
+or modification routes, agent records, Docker resources, cloud resources,
+database migrations, or new major dependencies.
+
 ### Testing and code quality
 
 | Area | Technology | Version or decision |

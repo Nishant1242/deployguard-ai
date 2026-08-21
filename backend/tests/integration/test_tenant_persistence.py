@@ -1,36 +1,11 @@
-from collections.abc import Generator
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import Engine, select
+from sqlalchemy import select
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Tenant
-
-
-@pytest.fixture
-def database_session(
-    migrated_postgresql_engine: Engine,
-) -> Generator[Session]:
-    """Provide a transaction that is rolled back after each test."""
-
-    connection = migrated_postgresql_engine.connect()
-    transaction = connection.begin()
-    session = Session(
-        bind=connection,
-        expire_on_commit=False,
-    )
-
-    try:
-        yield session
-    finally:
-        session.close()
-
-        if transaction.is_active:
-            transaction.rollback()
-
-        connection.close()
 
 
 def unique_slug(prefix: str) -> str:
