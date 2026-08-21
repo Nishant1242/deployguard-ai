@@ -60,6 +60,7 @@ Before replacing, adding, or removing a major technology:
 | PostgreSQL driver | Psycopg | 3.3.4 with binary distribution for development and CI |
 | Connection management | SQLAlchemy | Pre-ping and bounded pool configuration |
 | Integration testing | PostgreSQL | Dedicated database ending in `_test`; no SQLite substitute |
+| Tenant persistence | SQLAlchemy and PostgreSQL | UUID tenant record with unique slug, controlled status, and timestamps |
 
 #### Milestone 3A architecture decision
 
@@ -90,6 +91,35 @@ logic, Docker Compose, or cloud resources.
 The persistence foundation is classified as implemented. PostgreSQL `jsonb`
 usage and Row-Level Security remain planned until their own approved
 milestones are implemented.
+
+#### Milestone 3B architecture decision
+
+**Status:** Approved by the project owner on August 20, 2026 and implemented through PR #14.
+
+The approved tenant persistence model is:
+
+- One `tenants` table representing customer organizations
+- Application-generated UUID primary keys
+- Unique tenant slugs containing 3 to 63 lowercase letters, numbers, or single hyphens
+- Required display names containing 1 to 120 characters
+- Controlled tenant statuses limited to `active` and `suspended`
+- Timezone-aware creation and update timestamps
+- Alembic revision `0002_create_tenants`
+- Real PostgreSQL constraint and persistence integration tests
+- Transaction rollback after every tenant persistence test
+- No seeded tenant or production data
+
+PR #14 is limited to the tenant SQLAlchemy model, Alembic migration,
+model metadata tests, PostgreSQL persistence and constraint integration
+tests, shared integration-test fixtures, and architecture documentation.
+
+PR #14 does not add authentication, authorization, tenant memberships,
+PostgreSQL Row-Level Security policies, agent records, product API routes,
+tenant provisioning workflows, deployment logic, Docker resources, or
+cloud resources.
+
+Tenant-aware authorization and PostgreSQL Row-Level Security remain planned
+for separately approved milestones.
 
 ### Testing and code quality
 
