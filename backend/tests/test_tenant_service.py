@@ -1,13 +1,16 @@
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.models import Tenant
 from app.schemas.tenant import TenantCreate
 from app.services.tenant import (
     DuplicateTenantSlugError,
     create_tenant,
+    get_tenant_by_id,
 )
 
 
@@ -121,3 +124,42 @@ def test_create_tenant_rolls_back_other_database_errors() -> None:
 
     assert captured_error.value is database_error
     session.rollback.assert_called_once_with()
+
+
+def test_get_tenant_by_id_returns_existing_tenant() -> None:
+    session = MagicMock(spec=Session)
+    tenant_id = uuid4()
+    tenant = Tenant(
+        id=tenant_id,
+        slug="acme-operations",
+        display_name="Acme Operations",
+    )
+    session.get.return_value = tenant
+
+    result = get_tenant_by_id(
+        session,
+        tenant_id,
+    )
+
+    assert result is tenant
+    session.get.assert_called_once_with(
+        Tenant,
+        tenant_id,
+    )
+
+
+def test_get_tenant_by_id_returns_none_when_tenant_is_missing() -> None:
+    session = MagicMock(spec=Session)
+    tenant_id = uuid4()
+    session.get.return_value = None
+
+    result = get_tenant_by_id(
+        session,
+        tenant_id,
+    )
+
+    assert result is None
+    session.get.assert_called_once_with(
+        Tenant,
+        tenant_id,
+    )

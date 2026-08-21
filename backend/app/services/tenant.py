@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -54,3 +56,15 @@ def create_tenant(
         raise
 
     return tenant
+
+
+def get_tenant_by_id(
+    session: Session,
+    tenant_id: UUID,
+) -> Tenant | None:
+    """Return one tenant by primary key when it exists."""
+
+    return session.get(
+        Tenant,
+        tenant_id,
+    )

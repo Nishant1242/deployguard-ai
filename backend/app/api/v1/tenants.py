@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,6 +10,7 @@ from app.schemas.tenant import TenantCreate, TenantResponse
 from app.services.tenant import (
     DuplicateTenantSlugError,
     create_tenant as create_tenant_service,
+    get_tenant_by_id,
 )
 
 
@@ -44,3 +46,32 @@ def create_tenant(
             status_code=status.HTTP_409_CONFLICT,
             detail="A tenant with this slug already exists.",
         ) from error
+
+
+@router.get(
+    "/tenants/{tenant_id}",
+    response_model=TenantResponse,
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "The tenant does not exist.",
+        }
+    },
+)
+def get_tenant(
+    tenant_id: UUID,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Tenant:
+    """Return one tenant organization by UUID."""
+
+    tenant = get_tenant_by_id(
+        session,
+        tenant_id,
+    )
+
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found.",
+        )
+
+    return tenant

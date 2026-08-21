@@ -149,3 +149,82 @@ def test_create_tenant_rejects_invalid_requests_before_service(
 
     assert response.status_code == 422
     service_mock.assert_not_called()
+
+
+def test_get_tenant_returns_existing_public_tenant(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant = SimpleNamespace(
+        id=TENANT_ID,
+        slug="acme-operations",
+        display_name="Acme Operations",
+        status="active",
+        created_at=TIMESTAMP,
+        updated_at=TIMESTAMP,
+        internal_value="must-not-be-returned",
+    )
+    service_mock = MagicMock(return_value=tenant)
+    monkeypatch.setattr(
+        tenants_module,
+        "get_tenant_by_id",
+        service_mock,
+    )
+
+    response = client.get(
+        f"/api/v1/tenants/{TENANT_ID}",
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(TENANT_ID),
+        "slug": "acme-operations",
+        "display_name": "Acme Operations",
+        "status": "active",
+        "created_at": "2026-08-20T12:00:00Z",
+        "updated_at": "2026-08-20T12:00:00Z",
+    }
+
+    service_mock.assert_called_once()
+    assert service_mock.call_args.args[1] == TENANT_ID
+
+
+def test_get_tenant_returns_not_found_for_unknown_uuid(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    missing_tenant_id = UUID("22222222-2222-4222-8222-222222222222")
+    service_mock = MagicMock(return_value=None)
+    monkeypatch.setattr(
+        tenants_module,
+        "get_tenant_by_id",
+        service_mock,
+    )
+
+    response = client.get(
+        f"/api/v1/tenants/{missing_tenant_id}",
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Tenant not found."}
+    service_mock.assert_called_once()
+    assert service_mock.call_args.args[1] == missing_tenant_id
+
+
+def test_get_tenant_rejects_invalid_uuid_before_service(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service_mock = MagicMock()
+    monkeypatch.setattr(
+        tenants_module,
+        "get_tenant_by_id",
+        service_mock,
+    )
+
+    response = client.get(
+        "/api/v1/tenants/not-a-uuid",
+    )
+
+    assert response.status_code == 422
+    service_mock.assert_not_called()
